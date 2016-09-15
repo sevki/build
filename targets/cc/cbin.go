@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"sevki.org/build"
+	"sevki.org/build/parser"
 	"sevki.org/build/util"
 	"sevki.org/lib/prettyprint"
 )
@@ -23,22 +24,15 @@ type CBin struct {
 	CompilerOptions CompilerFlags `cxx_binary:"compiler_flags" cc_binary:"copts"`
 	LinkerOptions   []string      `cxx_binary:"linker_flags" cc_binary:"linkopts"`
 	LinkerFile      string        `cxx_binary:"ld" cc_binary:"ld" build:"path"`
+	BinOut          string        `cxx_binary:"out" cc_binary:"out"`
 	Static          bool          `cxx_binary:"linkstatic" cc_binary:"linkstatic"`
 	Strip           bool          `cxx_binary:"strip" cc_binary:"strip"`
 	AlwaysLink      bool          `cxx_binary:"alwayslink" cc_binary:"alwayslink"`
 }
 
-func split(s string, c string) string {
-	i := strings.Index(s, c)
-	if i < 0 {
-		return s
-	}
-
-	return s[i+1:]
-}
 func (cb *CBin) Hash() []byte {
-
 	h := sha1.New()
+	io.WriteString(h, util.Arch())
 	io.WriteString(h, CCVersion)
 	io.WriteString(h, cb.Name)
 	util.HashFilesWithExt(h, cb.Includes, ".h")
@@ -73,31 +67,25 @@ func (cb *CBin) Build(c *build.Context) error {
 		ldparams = append(ldparams, fmt.Sprintf("%s.o", fname[:strings.LastIndex(fname, ".")]))
 	}
 
-	haslib := false
+	var bigl []string
 	for _, dep := range cb.Dependencies {
-		d := split(dep, ":")
-		if len(d) < 3 {
-			continue
-		}
-		if d[:3] == "lib" {
-			if cb.AlwaysLink {
-				ldparams = append(ldparams, fmt.Sprintf("%s.a", d))
-			} else {
-				if !haslib {
-					ldparams = append(ldparams, "-L", "lib")
-					haslib = true
-				}
-				ldparams = append(ldparams, fmt.Sprintf("-l%s", d[3:]))
-			}
-		}
+		l := parser.NewTargetURLFromString(dep)
 
-		// kernel specific
-		if len(d) < 4 {
-			continue
+		switch {
+		case strings.HasPrefix(l.Target, "lib"):
+			if cb.AlwaysLink {
+				ldparams = append(ldparams, fmt.Sprintf("%s.a", l.Target))
+				break
+			}
+			bigl = append(bigl, "-l"+l.Target[3:])
+		case strings.HasPrefix(l.Target, "klib"):
+			// kernel specific
+			ldparams = append(ldparams, fmt.Sprintf("%s.a", l.Target))
 		}
-		if d[:4] == "klib" {
-			ldparams = append(ldparams, fmt.Sprintf("%s.a", d))
-		}
+	}
+	if len(bigl) != 0 {
+		ldparams = append(ldparams, "-L", "lib")
+		ldparams = append(ldparams, bigl...)
 	}
 
 	if err := c.Exec(Linker(), CCENV, ldparams); err != nil {
@@ -113,11 +101,9 @@ func (cb *CBin) Build(c *build.Context) error {
 }
 
 func (cb *CBin) Installs() map[string]string {
-	exports := make(map[string]string)
-
-	exports[filepath.Join("bin", cb.Name)] = cb.Name
-
-	return exports
+	return map[string]string{
+		filepath.Join("bin", cb.BinOut, cb.Name): cb.Name,
+	}
 }
 
 func (cb *CBin) GetName() string {

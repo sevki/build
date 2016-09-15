@@ -8,13 +8,11 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
-	"sevki.org/build/util"
-
-	"path/filepath"
-
 	"sevki.org/build"
+	"sevki.org/build/util"
 )
 
 type CLib struct {
@@ -31,7 +29,7 @@ type CLib struct {
 
 func (cl *CLib) Hash() []byte {
 	h := sha1.New()
-
+	io.WriteString(h, util.Arch())
 	io.WriteString(h, CCVersion)
 	io.WriteString(h, cl.Name)
 	util.HashFiles(h, cl.Includes)
@@ -72,6 +70,7 @@ func (cl *CLib) Build(c *build.Context) error {
 
 	return nil
 }
+
 func (cl *CLib) Installs() map[string]string {
 	exports := make(map[string]string)
 	libName := fmt.Sprintf("%s.a", cl.Name)
@@ -82,6 +81,7 @@ func (cl *CLib) Installs() map[string]string {
 	}
 	return exports
 }
+
 func (cl *CLib) GetName() string {
 	return cl.Name
 }

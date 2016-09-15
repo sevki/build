@@ -6,7 +6,6 @@
 package postprocessor // import "sevki.org/build/postprocessor"
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -120,17 +119,11 @@ func (pp *PostProcessor) ProcessPaths(t build.Target, deps []build.Target) error
 }
 
 func (pp *PostProcessor) absPath(s string) string {
-
-	if len(s) < 2 {
-		log.Fatalf("%s is invalid", s)
-	}
-	switch {
-	case s[:2] == "//":
+	if strings.HasPrefix(s, "//") {
 		return filepath.Join(pp.projectPath, strings.Trim(s, "//"))
-	default:
-		if filepath.IsAbs(s) {
-			return s
-		}
-		return filepath.Join(pp.projectPath, pp.packagePath, s)
 	}
+	if filepath.IsAbs(s) {
+		return s
+	}
+	return filepath.Join(pp.projectPath, pp.packagePath, s)
 }

@@ -7,14 +7,12 @@ package builder // import "sevki.org/build/builder"
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"time"
-
-	"io/ioutil"
-
 	"strings"
+	"time"
 
 	"sevki.org/build"
 	"sevki.org/build/util"
@@ -245,6 +243,7 @@ func install(job *Node) error {
 
 		buildOutTarget := filepath.Join(
 			buildOut,
+			util.Arch(),
 			targetDir,
 		)
 		if err := os.MkdirAll(

@@ -19,7 +19,8 @@ import (
 var (
 	file ini.File
 
-	pp = ""
+	pp   = ""
+	arch = ""
 )
 
 func init() {
@@ -31,6 +32,11 @@ func init() {
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
+	}
+
+	arch = Getenv("ARCH")
+	if arch == "" {
+		arch = runtime.GOARCH
 	}
 }
 
@@ -49,9 +55,15 @@ func Getenv(s string) string {
 		return ""
 	}
 }
+
+func Arch() string {
+	return arch
+}
+
 func GetProjectPath() (ProjectPath string) {
 	return pp
 }
+
 func RelPPath(p string) string {
 	rel, _ := filepath.Rel(GetProjectPath(), p)
 	return rel

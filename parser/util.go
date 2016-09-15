@@ -158,6 +158,9 @@ func NewTargetURLFromString(u string) (tu TargetURL) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if tu.Package == "." {
+			tu.Package = ""
+		}
 	}
 	if tu.Target == "" {
 		tu.Target = path.Base(tu.Package)
