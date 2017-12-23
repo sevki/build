@@ -8,6 +8,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 
 var (
 	printenv = flag.Bool("e", false, "prints envinroment variables into the log")
+	l        = log.New(os.Stdout, "executor: ", 0)
 )
 
 // Executor defines the envinroment in which a target will be built, it
@@ -27,6 +29,14 @@ type Executor struct {
 	wd  string
 	run []*Run
 	log []fmt.Stringer
+}
+
+// New initializes and returns a new executor.Executor
+func New(ctx context.Context, dir string) *Executor {
+	return &Executor{
+		wd:  dir,
+		ctx: ctx,
+	}
 }
 
 // Context returns the context that's attached to the Executor
@@ -73,14 +83,6 @@ func (e *Executor) Log() []fmt.Stringer {
 	return e.log
 }
 
-// New initializes and returns a new executor.Executor
-func New(ctx context.Context, dir string) *Executor {
-	return &Executor{
-		wd:  dir,
-		ctx: ctx,
-	}
-}
-
 // Printf wraps sprintf for log items
 func (e *Executor) Printf(format string, v ...interface{}) {
 	e.log = append(e.log, Message(fmt.Sprintf(format, v...)))
@@ -93,7 +95,6 @@ func (e *Executor) Println(v ...interface{}) {
 
 // Exec executes a command writing it's outputs to the context
 func (e *Executor) Exec(cmd string, env, args []string) error {
-
 	run := Run{
 		At:   time.Now(),
 		Cmd:  cmd,
